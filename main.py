@@ -50,15 +50,22 @@ def parse_dates(dataset):
     return dataset
 
 
-def dump_file(dataset):
-    pass    
+def prepare_data():
+    ''' Workflow to clean data. '''
 
-
-if __name__ == '__main__':
     train = load_train_set()
     test  = load_test_set()
 
-    # dump files if needed
+    test.to_csv('data/test.csv', index=False)
     train.to_csv('data/train.csv', index=False)
-    train.to_csv('data/test.csv', index=False)
+
+
+if __name__ == '__main__':
+
+    train = pd.DataFrame(pd.read_csv('data/train.csv'))
+    test  = pd.DataFrame(pd.read_csv('data/test.csv'))
+
+    print(train.shape)
+    print(test.shape)
+
 
