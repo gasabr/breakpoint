@@ -1,5 +1,7 @@
 import pandas as pd
 from datetime import datetime
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
 
 train_payments_file = 'data/qiwi_payments_data_train.csv'
 train_users_file = 'data/qiwi_users_data_train.csv'
@@ -14,8 +16,9 @@ def load_train_set():
     a = pd.read_csv(train_users_file, sep=';', parse_dates=[1])
     train_users = pd.DataFrame(a)
 
+    # merge users and payments by user_id
     train = pd.merge(train_users, train_payments, on='user_id')
-
+    # parse dates
     train = parse_dates(train)
 
     return train
@@ -26,6 +29,7 @@ def load_test_set():
     a = pd.read_csv(test_users_file, sep=';', parse_dates=[1])
     test_users = pd.DataFrame(a)
 
+    # merge users and payments by user_id
     test = pd.merge(test_users, test_payments, on='user_id')
 
     test = parse_dates(test)
@@ -42,19 +46,45 @@ def parse_dates(dataset):
     dates = [datetime.strptime(dt, '%Y-%m') for dt in dataset['date_month']]
 
     unix = [int(dt.timestamp()) for dt in dates]
-
     dataset['unix_time'] = unix
 
-    dataset.drop(['date_month'], axis=1)
+    dataset = dataset.drop(['date_month'], axis=1)
 
     return dataset
 
 
 def prepare_data():
-    ''' Workflow to clean data. '''
+    ''' Workflow to clean data. 
 
+        This function cleans the data, add it at the beggining of main()
+        to refresh datasets. 
+    '''
+
+    # load the data from source
     train = load_train_set()
     test  = load_test_set()
+
+    # encode sex in train set
+    le = LabelEncoder()
+    le.fit(train['sex'])
+    train['sex'] = le.transform(train['sex'])
+
+    # encode universities with labels
+    unis = set(train['university'])
+    # unit 2 sets of names to get all of them
+    unis = unis.union(test['university'])
+    le.fit(pd.Series(list(unis)))
+    # transformation
+    train['university'] = le.transform(train[['university']])
+    test['university'] = le.transform(test['university'])
+
+    # fill None in graduation year with 0s
+    train['graduation_year'] = train['graduation_year'].fillna(value=0)
+    test['graduation_year']  = test['graduation_year'].fillna(value=0)
+
+    # change `graduation_year` type to None
+    train['graduation_year'] = train['graduation_year'].astype(int)
+    test['graduation_year'] = test['graduation_year'].astype(int)
 
     test.to_csv('data/test.csv', index=False)
     train.to_csv('data/train.csv', index=False)
@@ -62,10 +92,12 @@ def prepare_data():
 
 if __name__ == '__main__':
 
+    prepare_data()
+
     train = pd.DataFrame(pd.read_csv('data/train.csv'))
     test  = pd.DataFrame(pd.read_csv('data/test.csv'))
 
-    print(train.shape)
-    print(test.shape)
+    print(test.head)
 
+    
 
