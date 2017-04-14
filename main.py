@@ -11,10 +11,8 @@ test_users_file = 'data/qiwi_users_data_test.csv'
 
 
 def load_train_set():
-    train_payments = pd.DataFrame.from_csv(train_payments_file, sep=';')
-
-    a = pd.read_csv(train_users_file, sep=';', parse_dates=[1])
-    train_users = pd.DataFrame(a)
+    train_payments = pd.read_csv(train_payments_file, sep=';')
+    train_users    = pd.read_csv(train_users_file, sep=';')
 
     # merge users and payments by user_id
     train = pd.merge(train_users, train_payments, on='user_id')
@@ -24,14 +22,11 @@ def load_train_set():
     return train
 
 def load_test_set():
-    test_payments = pd.DataFrame.from_csv(test_payments_file, sep=';')
-
-    a = pd.read_csv(test_users_file, sep=';', parse_dates=[1])
-    test_users = pd.DataFrame(a)
+    test_payments = pd.read_csv(test_payments_file, sep=';')
+    test_users    = pd.read_csv(test_users_file, sep=';')
 
     # merge users and payments by user_id
     test = pd.merge(test_users, test_payments, on='user_id')
-
     test = parse_dates(test)
 
     return test
@@ -70,9 +65,27 @@ def prepare_data():
     train['sex'] = le.transform(train['sex'])
 
     # encode universities with labels
+    train, test = binarize_uni(train, test)
+
+    train, test = binarize_category(train, test)
+    
+    # fill None in graduation year with 0s
+    train['graduation_year'] = train['graduation_year'].fillna(value=0)
+    test['graduation_year']  = test['graduation_year'].fillna(value=0)
+
+    # change `graduation_year` type to int
+    train['graduation_year'] = train['graduation_year'].astype(int)
+    test['graduation_year']  = test['graduation_year'].astype(int)
+
+    test.to_csv('data/test.csv', index=False)
+    train.to_csv('data/train.csv', index=False)
+
+
+def binarize_uni(train, test):
     unis = set(train['university'])
     # unit 2 sets of names to get all of them
     unis = pd.Series(list(unis.union(test['university'])))
+    le = LabelEncoder()
     le.fit(unis)
     # transformation
     train['university'] = le.transform(train[['university']])
@@ -88,26 +101,44 @@ def prepare_data():
 
     # add binarized columns to DataFrames
     train = pd.concat([train, train_uni_bin], axis=1)
-    test = pd.concat([test, test_uni_bin], axis=1)
+    test  = pd.concat([test, test_uni_bin], axis=1)
 
     # drop encoded columns
     train = train.drop(['university'], axis=1)
     test  = test.drop(['university'], axis=1)
 
-    # fill None in graduation year with 0s
-    train['graduation_year'] = train['graduation_year'].fillna(value=0)
-    test['graduation_year']  = test['graduation_year'].fillna(value=0)
+    return train, test
 
-    # change `graduation_year` type to int
-    train['graduation_year'] = train['graduation_year'].astype(int)
-    test['graduation_year'] = test['graduation_year'].astype(int)
 
-    test.to_csv('data/test.csv', index=False)
-    train.to_csv('data/train.csv', index=False)
+def binarize_category(train, test):
+    # binarize cathogory column
+    categories = set(train['category'])
+    categories = pd.Series(list(categories.union(test['category'])))
+    le = LabelEncoder()
+    le.fit(categories)
+    cols = ['cat={}'.format(i) for i in range(len(categories))]
+    train_cat_bin = pd.DataFrame(label_binarize(train['category'], categories),
+                                 columns=cols)
+    test_cat_bin  = pd.DataFrame(label_binarize(test['category'], categories), 
+                                 columns=cols)
+
+    train = pd.concat([train, train_cat_bin], axis=1)
+    test  = pd.concat([test, test_cat_bin], axis=1)
+
+    train = train.drop(['category'], axis=1)
+    test  = test.drop(['category'], axis=1)
+
+    return train, test
+
+
+def create_result():
+    result = pd.read_csv('data/result.csv')
+    clean_result = result[['user_id', 'sex', 'age']]
+    clean_result = clean_result.drop_duplicates(['user_id'])
+    clean_result.to_csv('data/result_clean_.csv', index=False)
 
 
 if __name__ == '__main__':
-
     prepare_data()
 
     
