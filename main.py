@@ -91,8 +91,8 @@ def prepare_data():
     test = pd.concat([test, test_uni_bin], axis=1)
 
     # drop encoded columns
-    train.drop(['university'], axis=1)
-    test.drop(['university'], axis=1)
+    train = train.drop(['university'], axis=1)
+    test  = test.drop(['university'], axis=1)
 
     # fill None in graduation year with 0s
     train['graduation_year'] = train['graduation_year'].fillna(value=0)
@@ -109,11 +109,6 @@ def prepare_data():
 if __name__ == '__main__':
 
     prepare_data()
-
-    train = pd.DataFrame(pd.read_csv('data/train.csv'))
-    test  = pd.DataFrame(pd.read_csv('data/test.csv'))
-
-    print(test.head)
 
     
 
